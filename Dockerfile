@@ -208,6 +208,51 @@ RUN ln -sf /app/openclaw.mjs /usr/local/bin/openclaw \
 
 ENV NODE_ENV=production
 
+# Install Bun + qmd in the final runtime image so `node` can use them interactively
+ENV BUN_INSTALL=/usr/local/bun
+ENV PATH="${BUN_INSTALL}/bin:${PATH}"
+
+RUN set -eux; \
+    mkdir -p "${BUN_INSTALL}"; \
+    for attempt in 1 2 3 4 5; do \
+      if curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL https://bun.sh/install | bash; then \
+        break; \
+      fi; \
+      if [ "$attempt" -eq 5 ]; then \
+        exit 1; \
+      fi; \
+      sleep $((attempt * 2)); \
+    done; \
+    bun add -g @tobilu/qmd clawhub; \
+    chmod -R a+rX "${BUN_INSTALL}"
+
+# Install Go + build gogcli from source in the final runtime image
+ARG GO_VERSION=1.25.8
+ARG TARGETARCH
+
+RUN set -eux; \
+    apt-get update; \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      git make ca-certificates curl; \
+    rm -rf /var/lib/apt/lists/*; \
+    case "${TARGETARCH}" in \
+      amd64) GOARCH=amd64 ;; \
+      arm64) GOARCH=arm64 ;; \
+      *) echo "Unsupported TARGETARCH: ${TARGETARCH}"; exit 1 ;; \
+    esac; \
+    curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${GOARCH}.tar.gz" -o /tmp/go.tgz; \
+    rm -rf /usr/local/go; \
+    tar -C /usr/local -xzf /tmp/go.tgz; \
+    rm -f /tmp/go.tgz; \
+    export PATH="/usr/local/go/bin:${PATH}"; \
+    go version; \
+    git clone https://github.com/steipete/gogcli.git /tmp/gogcli; \
+    cd /tmp/gogcli; \
+    make; \
+    install -m 0755 ./bin/gog /usr/local/bin/gog; \
+    cd /; \
+    rm -rf /tmp/gogcli
+
 # Security hardening: Run as non-root user
 # The node:22-bookworm image includes a 'node' user (uid 1000)
 # This reduces the attack surface by preventing container escape via root privileges
