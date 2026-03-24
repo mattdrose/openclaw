@@ -19,12 +19,12 @@ services:
       - BRAVE_API_KEY=${BRAVE_API_KEY}
       - XDG_CONFIG_HOME=${XDG_CONFIG_HOME}
       - TZ=${OPENCLAW_TZ}
-      - PATH=/home/linuxbrew/.linuxbrew/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      - PATH=/usr/local/bun/bin:/home/linuxbrew/.linuxbrew/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     volumes:
       - ${OPENCLAW_CONFIG_DIR}:/home/node/.openclaw
       - ${OPENCLAW_WORKSPACE_DIR}:/home/node/.openclaw/workspace
       - ${OPENCLAW_SSH_DIR}:/home/node/.ssh
-      - ${OPENCLAW_GOG_CONFIG_DIR}:/home/node/.gog
+      - ${OPENCLAW_GOG_CONFIG_DIR}:/home/node/.config/gogcli
     ports:
       # Bind ONLY to localhost - Tailscale Serve will proxy
       - "127.0.0.1:${OPENCLAW_GATEWAY_PORT}:18789"
